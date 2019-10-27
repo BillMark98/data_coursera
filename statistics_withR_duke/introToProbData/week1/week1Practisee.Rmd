@@ -3,7 +3,7 @@ title: "Introduction to R and RStudio"
 output: statsr:::statswithr_lab
 ---
 
-**This is the Rmd file based on the file given by  the Coursera course *Introduction to Probability and Data* provided by *Duke University*. I have completed blanks that are supposed to be filled as homework**
+**This is the Rmd file based on the file given by  the Coursera course   *Introduction to Probability and Data* provided by *Duke University*. I have   completed blanks that are supposed to be filled as homework**
 <div id="instructions">
 Complete all **Exercises**, and submit answers to **Questions** on the Coursera 
 platform.
