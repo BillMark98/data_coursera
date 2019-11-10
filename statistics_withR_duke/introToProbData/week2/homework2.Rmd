@@ -509,11 +509,27 @@ were `"delayed"` departing arrive `"on time"`?
 nycflights <- nycflights %>%
   mutate(arr_type = ifelse(arr_delay <= 0, "on time", "delayed"))
 
-ontimeFlight <- nycflights %>%
-  filter(arr_type == "on time")
 
-depOn <- ontimeFlight %>%
-  summarize(delayDepartArrOn = sum(dep_type == "delayed")/n())
+## note that the asked percentage is the percentage of flight whose departure is delayed
+## but arrived on time in the flight whose departure is delayed. i.e.  \frac{dep_type = "delayed" ^ arr_type = "on time"}{dep_type = "delayed"} 
+delayDepFlight <- nycflights %>%
+  filter(dep_type == "delayed")
+arrOn <- delayDepFlight %>%
+  summarize(delayDepartArrOn = sum(arr_type == "on time")/n())
 
-depOn
+#delayDepFlight
+
+arrOn
+```
+
+
+
+
+```{r arrtype-deptype}
+nycflights %>%
+  mutate(arr_type = ifelse(arr_delay <= 0, "on time", "delayed")) %>%
+  mutate(dep_type = ifelse(dep_delay <= 0, "on time", "delayed")) %>%
+  select(arr_type, dep_type) %>%
+  table()
+
 ```
