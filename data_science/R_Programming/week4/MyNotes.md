@@ -23,3 +23,6 @@ e.g
 ```
 stateData <- outcomeData[(outcomeData$State == state),]
 ```
+
+### check if a element is contained in a column of a data frame
+use `match` function
