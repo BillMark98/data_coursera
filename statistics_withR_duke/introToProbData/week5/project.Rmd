@@ -1,0 +1,216 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(dplyr)
+library(ggplot2)
+library(statsr)
+```
+
+### Load data
+
+``` {r load-data}
+load("brfss2013.RData")
+```
+
+
+## Part 1: Data
+
+According to the website [BRFSS](https://www.cdc.gov/brfss/), the survey is conducted using Random Digit Dialing(RDD) on both landlines and cell phones. The questionaire that is devised is based on the core questionaire provided by Centers for Disease Control and Prevention(CDC). The state can add optional questions. A number of states applied stratification from the onset to perform the sampling.
+
+Since the survey is conducted using random algorithms, the samples are randomly chosen. It can therefore be generalized to the whole country. On the other hand, since the survey is an observational study rather than an experiment, it can only provide information on correlation rather than causality.
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+What is the relationship between the income level and the frequency of
+doing physical exercise, and whether they suffer from heart diseases (Heart Attack,
+Angina Or Coronary Heart Disease)?
+
+**Research quesion 2:**
+What is the relationship about the sleep time and depressive disorder?
+
+**Research quesion 3:**
+What is the relationship between the health status and the mental satisfaction with life?
+* * *
+
+## Part 3: Exploratory data analysis
+
+**Research quesion 1:**
+What is the relationship between the income level and the frequency of
+doing physical exercise, and whether they suffer from heart diseases (Heart Attack,
+Angina Or Coronary Heart Disease)?
+
+The following are the variables we need to analyse the question.  
+For detailed information, see the [background](https://d3c33hcgiwev3.cloudfront.net/_e34476fda339107329fc316d1f98e042_brfss_codebook.html?Expires=1574640000&Signature=IxhcWClvS5u7IPtlR8Cr01e1kkpIb8CKjY8G2Y5Y0tu-dFFwE6PEcb5DpvDdSQdqzAMEw9jFQ~knB0GgWOLTnyhkCDdZRG5kXXsr7fCRVEPaN6zcVRkhbZV0IAJcr8h6s7ETe6bUXfLoZ9LtzzdciT6OfMOhHXOBgx2N0uWkvqk_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A##sleptim1) or  [codebook](https://www.cdc.gov/brfss/annual_data/2013/pdf/CODEBOOK13_LLCP.pdf).
+
+
+*__income2__*: Income Level  
+*__exerany2__*: Exercise in past 30 Days    
+*__cvdinfr4__*: Ever Diagonsed With Heart Attack  
+*__cvdcrhd4__*: Ever Diaganosed With Angina Or Coronary Heart Disease  
+
+First we want to have an overview of all the classes of income level:
+```{r income level}
+brfss2013 %>%
+    filter(!is.na(income2)) %>%
+    group_by(income2) %>%
+    summarize(n = n())
+```
+The possible value of the variable `exerany2`:
+```{r exercise any level}
+brfss2013 %>%
+    group_by(exerany2) %>%
+    summarize(n = n())
+```
+We want to subset the `brfss2013` data to obtain the data set which  does not 
+contain `NA` values on the column of `cvdinfr4` and `cvdcrhd4` and mutate it to have a new column indicating if the interviewer has heart diseases.
+``` {r chronic health -- heart attack, angina or coronary heart disease}
+brfss2013_heartDisease <- brfss2013 %>%
+    filter(!is.na(cvdinfr4) & !is.na(cvdcrhd4)) %>%
+    mutate(heart_disease = ifelse(cvdinfr4 == "Yes" | cvdcrhd4 == "Yes", "Yes","No"))
+```
+Furthmore, we want to group the data according to the income level and analyse the 
+proportion of the people who have exercised in past 30 days and people who have heart
+diseases.
+``` {r chronic health -- heart disease}
+income_Exercise_heartDisease <- brfss2013_heartDisease %>%
+    filter(!is.na(income2) , !is.na(exerany2)) %>%
+    group_by(income2) %>%
+    summarize(n = n(), proportion_Exerany = sum(exerany2 == "Yes")/n(), proportion_HeartDisease = sum(heart_disease == "Yes")/n())
+
+income_Exercise_heartDisease[,1] = c("< 10","< 15","< 20","< 25","< 35","< 50","< 75",">= 75")
+```
+
+Now we are able to plot the data we have collected.
+``` {r plot}
+cols    <- c( "c1" = "#ff00ff", "c2" = "#3399ff" )
+shapes  <- c("s1" = 16, "s2" = 17)
+ggplot(income_Exercise_heartDisease,aes(x = income2)) +
+    geom_point(aes( y = proportion_Exerany, shape = "s1",color = "c1")) +              
+    geom_point(aes(y = proportion_HeartDisease, shape = "s2",color = "c2")) + 
+    scale_y_continuous(sec.axis = sec_axis(~. - 0.4, name = "Heart Disease Proportion")) +  labs(x =  "income(in thousand dollars)",y = "Exercise proportion") +
+    scale_color_manual(name = "Proportions", 
+                       breaks = c("c1", "c2"), 
+                       values = cols, 
+                       labels = c("Exercise in last 30 days", "Heart Disease")) +
+    scale_shape_manual(name = "Proportions", 
+                       breaks = c("s1", "s2"), 
+                       values = shapes, 
+                       labels = c("Exercise in last 30 days", "Heart Disease"))
+
+```
+
+We see that as the income goes higher, the proportion of people who have exercised
+in the last 30 days goes up and the proportion of people who suffer from heart diseases go down.
+
+**Research quesion 2:**  
+What is the relationship about the sleep time and depressive disorder?
+
+The following are the variables we need to analyse the question.
+For detailed information, see the [background](https://d3c33hcgiwev3.cloudfront.net/_e34476fda339107329fc316d1f98e042_brfss_codebook.html?Expires=1574640000&Signature=IxhcWClvS5u7IPtlR8Cr01e1kkpIb8CKjY8G2Y5Y0tu-dFFwE6PEcb5DpvDdSQdqzAMEw9jFQ~knB0GgWOLTnyhkCDdZRG5kXXsr7fCRVEPaN6zcVRkhbZV0IAJcr8h6s7ETe6bUXfLoZ9LtzzdciT6OfMOhHXOBgx2N0uWkvqk_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A##sleptim1) or  [codebook](https://www.cdc.gov/brfss/annual_data/2013/pdf/CODEBOOK13_LLCP.pdf).
+
+*__sleptim1__*: How Much Time Do You Sleep  
+*__addepev2__*: Ever Told You Had A Depressive Disorder  
+
+First see all the values of the variable `sleptim1`
+```{r}
+brfss2013 %>%
+    group_by(sleptim1) %>%
+    summarize(n = n())
+
+unique(brfss2013$sleptim1)
+```
+We only take the time from 1 - 24 into account, and we define that having
+sleep time less than or equal to 5 hours as having **inadequate sleep time**
+```{r filter-sleepttime}
+brfss2013_sleepTime <- brfss2013 %>%
+    filter(sleptim1 <= 24 & sleptim1 >= 1) %>%
+    mutate(inadequateSleep = ifelse(sleptim1 <= 5, "Yes","No"))
+```
+
+The value of the variable `addepev2`
+```{r addepev2-value}
+unique(brfss2013$addepev2)
+```
+Analyse the relationship
+```{r sleepTime and depressive disorder}
+brfss2013_sleepTime %>%
+    filter(!is.na(addepev2)) %>%
+    group_by(inadequateSleep) %>%
+    summarize(proportion_Depressive = sum(addepev2 == "Yes")/n())
+```
+Those who have inadequate sleep time have a higher proportion of getting
+depressive disorder. It seems that there is a correlation between these two factors.  
+
+We further analyse with the group of people who have inadequate sleep
+
+```{r inadequateSleep and depressive disorder}
+sleeptime_DepressiveD <- brfss2013_sleepTime %>%
+    filter(!is.na(addepev2)) %>%
+    group_by(sleptim1) %>%
+    summarize(proportion_Depressive = sum(addepev2 == "Yes")/n())
+```
+
+```{r gplot sleeptime_DepressiveD}
+ggplot(sleeptime_DepressiveD, aes(x = sleptim1, y = proportion_Depressive)) +
+    geom_point() + 
+    geom_line() +
+    labs(x = "sleep time(hours)", y = "proportion of having Depressive Disorder")
+```
+
+It can be inferred that for those who have inadequate sleep time, the more they sleep, the less the proportion of having Depressive Disorder is. But if the sleep time reaches seven hours, the proportion of having Depressive Disorder will rise as the sleep time increases and after 16 hours, this proportion vascillate greatly.
+So the correlation between the sleep time and the Depressive Disorder is quite clear if the sleep time is within the range 1 ~ 16, but not so if it exceeds 17 hours.
+
+**Research quesion 3:**
+We want to study the relationship between the health status and the mental satisfaction with life.   
+The following are the variables we need for analysis.
+For detailed information, see the [background](https://d3c33hcgiwev3.cloudfront.net/_e34476fda339107329fc316d1f98e042_brfss_codebook.html?Expires=1574640000&Signature=IxhcWClvS5u7IPtlR8Cr01e1kkpIb8CKjY8G2Y5Y0tu-dFFwE6PEcb5DpvDdSQdqzAMEw9jFQ~knB0GgWOLTnyhkCDdZRG5kXXsr7fCRVEPaN6zcVRkhbZV0IAJcr8h6s7ETe6bUXfLoZ9LtzzdciT6OfMOhHXOBgx2N0uWkvqk_&Key-Pair-Id=APKAJLTNE6QMUY6HBC5A##sleptim1) or  [codebook](https://www.cdc.gov/brfss/annual_data/2013/pdf/CODEBOOK13_LLCP.pdf).  
+
+*__genhlth__*: General Health  
+*__lsatisfy__*: Satisfaction With Life
+
+As usual, we first find the values of the three variables
+```{r q3 unique value}
+unique(brfss2013$genhlth)
+unique(brfss2013$lsatisfy)
+```
+
+We want to plot the proportion of those who have poor health status
+based on their view upon satisfaction with life
+```{r satisfaction-health}
+brfss2013_healthSatisfaction <- brfss2013 %>%
+     filter(!is.na(genhlth) & !is.na(lsatisfy)) %>%
+     select(genhlth,lsatisfy) %>%
+    group_by(lsatisfy) %>%
+    summarize(bad_health_status = sum(genhlth == "Poor")/n())
+```
+```{r plot data}
+ggplot(brfss2013_healthSatisfaction,aes(x = lsatisfy, y = bad_health_status)) +
+    geom_point() +
+    labs(x = "satisfaction with life", y = "proportion of having bad health status") +
+    ylim(0,0.6)
+```
+
+We see that the satisfaction with life and the health status is highly correlated.
+To further study the relationship between these two factors, we construct the table
+indicating the proportion of each health status given a view about the satisfaction with life
+```{r table satisfaction}
+ brfss2013 %>%
+    filter(!is.na(genhlth) & !is.na(lsatisfy)) %>%
+    select(lsatisfy,genhlth) %>%
+    table() %>%
+    prop.table(margin = 1)
+
+```
+We can see that the satisfaction with life and the general health status is strongly correlated. It can be inferred that the very satisfied person are most likely to have a good health status.
